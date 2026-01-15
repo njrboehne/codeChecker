@@ -1,23 +1,35 @@
-# Code Quality Agent
+# Code Quality AI Agent
 
-A comprehensive, automated code quality checking system that can be integrated into any project. This agent provides:
+An **AI-powered code quality agent** designed to work within Cursor IDE. This agent leverages Cursor's AI capabilities to provide intelligent, autonomous code quality guidance and automated quality checking.
 
-- 🤖 **Cursor AI Integration** - Automatic code quality guidance via `.cursorrules`
-- 🔍 **Automated Quality Checks** - Command-line script to scan your codebase
+**This is a true AI agent** because it:
+- 🤖 **Uses Cursor's LLM** - Powered by Cursor AI for semantic code understanding
+- 🧠 **Autonomous Decision-Making** - AI reasons about code quality and makes intelligent suggestions
+- 🎯 **Context-Aware** - Understands code semantics, not just patterns
+- 🔄 **Interactive** - Responds to developer questions and adapts to project context
+- 🔍 **Automated Enforcement** - Command-line script for CI/CD and batch checking
 - 🚀 **CI/CD Integration** - GitHub Actions workflow for automated checks
 - 📊 **Detailed Reports** - Actionable quality reports with severity levels
 
+> **Note**: This agent is designed to be used WITH Cursor IDE. When you add these files to your project, Cursor AI automatically becomes your code quality agent.
+
 ## Quick Start
+
+### Prerequisites
+- **Cursor IDE** (required) - This agent leverages Cursor's AI capabilities
+- Node.js 18+ (for the quality check script)
 
 ### 1. Copy Files to Your Project
 
 Copy these files/folders to your project root:
 
 ```
-.cursorrules                    → Project root
+.cursorrules                    → Project root (activates Cursor AI agent)
 scripts/quality-check.js        → scripts/ folder
 .github/workflows/quality-check.yml → .github/workflows/ (optional)
 ```
+
+**Once you add `.cursorrules` to your project, Cursor AI automatically becomes your code quality agent!**
 
 ### 2. Add to package.json
 
@@ -55,32 +67,49 @@ npm run quality
 
 ## Features
 
-### Cursor AI Integration
+### 🤖 AI Agent Capabilities (via Cursor)
 
-The `.cursorrules` file automatically guides Cursor AI to:
-- Flag security issues during coding
-- Suggest code improvements
-- Enforce coding standards
-- Review code before committing
+When you add this agent to your project, Cursor AI becomes your autonomous code quality agent:
+
+**Autonomous Operation:**
+- Monitors code as you write it
+- Flags issues proactively without explicit requests
+- Makes intelligent decisions about what to prioritize
+
+**Intelligent Reasoning:**
+- Understands code semantics and intent (not just syntax)
+- Provides context-aware suggestions
+- Explains *why* something is a problem, not just *that* it is
+
+**Interactive & Adaptive:**
+- Responds to your questions about code quality
+- Adapts to your project's specific patterns
+- Learns from your coding style
 
 **Just ask Cursor:**
 - "Review this code for quality issues"
 - "Check for security vulnerabilities"
 - "Does this follow our coding standards?"
+- "How can I improve this component?"
+- "What are the quality issues in this file?"
 
-### Automated Quality Checks
+The AI agent will analyze your code semantically and provide intelligent, contextual feedback.
 
-The `quality-check.js` script:
+### Automated Quality Checks (Enforcement Layer)
+
+The `quality-check.js` script provides automated enforcement:
 - Scans all TypeScript/JavaScript files
-- Detects common quality issues
-- Generates detailed reports
-- Exits with appropriate codes for CI/CD
+- Detects common quality issues using pattern matching
+- Generates detailed reports for CI/CD
+- Works alongside the AI agent for comprehensive coverage
 
 **Output includes:**
 - 🔴 Critical issues (must fix)
 - 🟠 High priority issues
 - 🟡 Medium priority warnings
 - 🔵 Low priority suggestions
+
+> **Note**: The script provides fast, automated checking. For intelligent, context-aware analysis, use Cursor AI with the `.cursorrules` agent configuration.
 
 ### CI/CD Integration
 
@@ -263,15 +292,24 @@ jobs:
 ## File Structure
 
 ```
-quality-agent/
-├── .cursorrules                    # Cursor AI rules
+code-quality-agent/
+├── .cursorrules                    # Cursor AI agent configuration (activates AI agent)
 ├── scripts/
-│   └── quality-check.js           # Quality check script
+│   └── quality-check.js           # Automated quality check script
 ├── .github/
 │   └── workflows/
 │       └── quality-check.yml      # GitHub Actions workflow
 └── README.md                       # This file
 ```
+
+## How It Works
+
+1. **Add `.cursorrules` to your project** → Cursor AI automatically becomes your code quality agent
+2. **Write code in Cursor** → AI agent monitors and provides intelligent feedback
+3. **Ask questions** → AI agent reasons about your code and suggests improvements
+4. **Run quality check script** → Automated enforcement for CI/CD and batch checking
+
+The AI agent works continuously in the background, providing intelligent code quality guidance as you develop.
 
 ## Contributing
 
