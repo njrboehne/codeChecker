@@ -1,0 +1,33 @@
+{
+  "name": "code-quality-agent",
+  "version": "1.0.0",
+  "description": "Automated code quality checking system with Cursor AI integration",
+  "type": "module",
+  "main": "scripts/quality-check.js",
+  "bin": {
+    "quality-check": "./scripts/quality-check.js"
+  },
+  "scripts": {
+    "quality": "node scripts/quality-check.js",
+    "quality:check": "node scripts/quality-check.js"
+  },
+  "keywords": [
+    "code-quality",
+    "linting",
+    "code-review",
+    "cursor",
+    "automation",
+    "ci-cd"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    ".cursorrules",
+    "scripts/",
+    ".github/",
+    "README.md"
+  ]
+}

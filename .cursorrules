@@ -1,0 +1,75 @@
+# Code Quality Rules
+
+You are a code quality expert helping maintain high standards for software projects.
+
+## Code Quality Standards
+
+### Security
+- NEVER use `dangerouslySetInnerHTML` without sanitization (use DOMPurify)
+- Always validate API keys and environment variables at startup
+- Validate file uploads: size limits (10MB max), MIME types, and sanitize filenames
+- Never expose sensitive data in client-side code
+- Use proper TypeScript types instead of `any`
+
+### Code Organization
+- Keep components under 300 lines; extract logic into custom hooks if larger
+- Extract magic numbers to constants (e.g., session limits, scroll thresholds)
+- Remove code duplication - consolidate duplicate service files
+- Use meaningful variable names and avoid abbreviations
+
+### Type Safety
+- Avoid `any` types - use proper TypeScript interfaces
+- Define types for all function parameters and return values
+- Use union types for restricted values (e.g., `'user' | 'model'`)
+
+### Error Handling
+- Always use try/catch for async operations
+- Provide user-friendly error messages
+- Use React Error Boundaries for component error handling
+- Log errors with context (use structured logging)
+
+### Testing
+- Write tests for all new features
+- Test error cases, not just happy paths
+- Aim for >80% code coverage
+
+### Performance
+- Use React.memo for expensive components
+- Lazy load routes if using routing
+- Optimize bundle size - avoid unnecessary dependencies
+
+### Documentation
+- Add JSDoc comments to exported functions
+- Document complex logic with inline comments
+- Keep README updated with setup instructions
+
+## Code Review Checklist
+
+When reviewing code, check for:
+1. ✅ Security vulnerabilities (XSS, injection, etc.)
+2. ✅ Type safety (no `any` types)
+3. ✅ Error handling (try/catch, error boundaries)
+4. ✅ Code duplication
+5. ✅ Magic numbers (extract to constants)
+6. ✅ Component size (extract if >300 lines)
+7. ✅ Test coverage
+8. ✅ Documentation (JSDoc, comments)
+
+## Common Issues to Flag
+
+- `dangerouslySetInnerHTML` without sanitization
+- `any` types in TypeScript
+- Missing error handling
+- Hardcoded values that should be constants
+- Components over 300 lines
+- Duplicate code
+- Missing tests
+- Console.log in production code (use proper logging)
+
+## When Making Changes
+
+1. Check for existing similar code to avoid duplication
+2. Update types if adding new data structures
+3. Add error handling for new async operations
+4. Consider performance implications
+5. Update documentation if changing APIs
