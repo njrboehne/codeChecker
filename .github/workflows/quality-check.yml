@@ -1,4 +1,4 @@
-name: Code Quality Check
+name: Code Quality Agent Validation
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 jobs:
-  quality-check:
+  validate-agent:
     runs-on: ubuntu-latest
     
     steps:
@@ -19,28 +19,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
       
-      - name: Install dependencies
-        run: npm ci
-        continue-on-error: true
+      - name: Validate script syntax
+        run: |
+          node --check scripts/quality-check.js
+          echo "✅ Script syntax is valid"
       
-      - name: Run quality check script
-        run: node scripts/quality-check.js
-        continue-on-error: true
+      - name: Validate required files exist
+        run: |
+          test -f .cursorrules && echo "✅ .cursorrules exists" || (echo "❌ .cursorrules missing" && exit 1)
+          test -f scripts/quality-check.js && echo "✅ quality-check.js exists" || (echo "❌ quality-check.js missing" && exit 1)
+          test -f README.md && echo "✅ README.md exists" || (echo "❌ README.md missing" && exit 1)
+          test -f package.json && echo "✅ package.json exists" || (echo "❌ package.json missing" && exit 1)
+          echo "✅ All required files present"
       
-      - name: Run TypeScript check
-        run: npx tsc --noEmit
-        continue-on-error: true
+      - name: Test script execution (dry run)
+        run: |
+          # Test that the script can at least start without errors
+          node scripts/quality-check.js --project-root . 2>&1 | head -20 || echo "Script executed (may have found issues, which is expected)"
       
-      - name: Check for security vulnerabilities
-        run: npm audit --audit-level=high || true
+      - name: Validate package.json
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))" && echo "✅ package.json is valid JSON"
       
-      - name: Upload quality report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-report
-          path: |
-            quality-report.txt
-          retention-days: 7
+      - name: Check file permissions
+        run: |
+          test -x scripts/quality-check.js && echo "✅ Script is executable" || echo "⚠️ Script is not executable (may need chmod +x)"
