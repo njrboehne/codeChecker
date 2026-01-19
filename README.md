@@ -55,6 +55,7 @@ npm run quality
 - ✅ **Python** (`.py`)
 - ✅ **HTML** (`.html`, `.htm`)
 - ✅ **SQL** (`.sql`)
+- ✅ **C# / .NET** (`.cs`, `.cshtml`, `.razor`) - .NET Framework 4.5.2+
 
 ### Security
 - ✅ XSS vulnerabilities (`dangerouslySetInnerHTML` without sanitization)
@@ -73,6 +74,9 @@ npm run quality
 - ✅ Python type hints (missing return types when parameters have type hints)
 - ✅ HTML accessibility (missing alt attributes, form labels)
 - ✅ SQL best practices (parameterized queries, transaction handling)
+- ✅ C# security (SQL injection, XSS, insecure deserialization)
+- ✅ C# code quality (IDisposable patterns, async/await, null checks, XML documentation)
+- ✅ .NET project configuration (.csproj, packages.config, app.config, web.config)
 
 ### Configuration
 - ✅ Missing linting tools
@@ -111,9 +115,10 @@ The AI agent will analyze your code semantically and provide intelligent, contex
 ### Automated Quality Checks (Enforcement Layer)
 
 The `quality-check.js` script provides automated enforcement:
-- Scans TypeScript/JavaScript, Python, HTML, and SQL files
+- Scans TypeScript/JavaScript, Python, HTML, SQL, and C# files
 - Detects common quality issues using pattern matching
 - Language-specific checks for security, type safety, and best practices
+- .NET Framework 4.5.2+ project file validation
 - Generates detailed reports for CI/CD
 - Works alongside the AI agent for comprehensive coverage
 
