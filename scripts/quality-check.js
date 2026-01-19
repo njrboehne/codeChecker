@@ -33,10 +33,47 @@ if (projectRootIndex !== -1 && args[projectRootIndex + 1]) {
 // Configuration
 const MAX_FILE_SIZE = 500; // lines
 const MAX_COMPONENT_SIZE = 300; // lines
-const FORBIDDEN_PATTERNS = [
+
+// Language-specific file extensions
+const SUPPORTED_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.py', '.html', '.htm', '.sql'];
+
+// TypeScript/JavaScript patterns
+const TS_JS_PATTERNS = [
   { pattern: /dangerouslySetInnerHTML/g, severity: 'critical', message: 'XSS vulnerability: dangerouslySetInnerHTML without sanitization' },
   { pattern: /:\s*any(\[|\s|;|\))/g, severity: 'high', message: 'Type safety issue: any type used' },
   { pattern: /console\.log\(/g, severity: 'medium', message: 'console.log found (use proper logging)' },
+  { pattern: /TODO|FIXME|HACK|XXX/g, severity: 'low', message: 'TODO/FIXME comment found' },
+];
+
+// Python patterns
+const PYTHON_PATTERNS = [
+  { pattern: /\beval\s*\(/g, severity: 'critical', message: 'Security risk: eval() can execute arbitrary code' },
+  { pattern: /\bexec\s*\(/g, severity: 'critical', message: 'Security risk: exec() can execute arbitrary code' },
+  { pattern: /\bpickle\.loads?\s*\(/g, severity: 'critical', message: 'Security risk: pickle.load() can execute arbitrary code. Use json or validate input' },
+  { pattern: /\bprint\s*\(/g, severity: 'medium', message: 'print() found (use logging module for production code)' },
+  { pattern: /\bAny\b/g, severity: 'high', message: 'Type safety: Any type used (from typing). Prefer specific types' },
+  { pattern: /TODO|FIXME|HACK|XXX/g, severity: 'low', message: 'TODO/FIXME comment found' },
+];
+
+// HTML patterns
+const HTML_PATTERNS = [
+  { pattern: /<script[^>]*>(?!.*nonce)(?!.*CSP)[^<]*<\/script>/gi, severity: 'critical', message: 'Inline script without nonce/CSP protection (XSS risk)' },
+  { pattern: /onclick\s*=/gi, severity: 'high', message: 'Inline event handler (onclick) - XSS risk. Use addEventListener instead' },
+  { pattern: /onerror\s*=|onload\s*=|onmouseover\s*=/gi, severity: 'high', message: 'Inline event handler - XSS risk. Use addEventListener instead' },
+  { pattern: /<img[^>]*(?!.*alt=)[^>]*>/gi, severity: 'medium', message: 'Image missing alt attribute (accessibility issue)' },
+  { pattern: /<style[^>]*>(?!.*nonce)[^<]*<\/style>/gi, severity: 'medium', message: 'Inline styles without nonce/CSP protection' },
+  { pattern: /javascript:/gi, severity: 'critical', message: 'javascript: protocol in href/src (XSS risk)' },
+  { pattern: /TODO|FIXME|HACK|XXX/g, severity: 'low', message: 'TODO/FIXME comment found' },
+];
+
+// SQL patterns
+const SQL_PATTERNS = [
+  { pattern: /SELECT\s+.*\s+FROM\s+.*\s+WHERE\s+.*['"]\s*\+\s*['"]/gi, severity: 'critical', message: 'SQL injection risk: String concatenation in WHERE clause. Use parameterized queries' },
+  { pattern: /INSERT\s+INTO\s+.*\s+VALUES\s*\([^)]*['"]\s*\+\s*['"]/gi, severity: 'critical', message: 'SQL injection risk: String concatenation in INSERT. Use parameterized queries' },
+  { pattern: /UPDATE\s+.*\s+SET\s+.*['"]\s*\+\s*['"]/gi, severity: 'critical', message: 'SQL injection risk: String concatenation in UPDATE. Use parameterized queries' },
+  { pattern: /password\s*=\s*['"][^'"]+['"]/gi, severity: 'critical', message: 'Hardcoded password found. Use environment variables or secure config' },
+  { pattern: /(?:password|pwd|passwd)\s*=\s*['"][^'"]+['"]/gi, severity: 'critical', message: 'Hardcoded credentials found. Use environment variables' },
+  { pattern: /SELECT\s+\*\s+FROM/gi, severity: 'medium', message: 'SELECT * found. Consider specifying columns explicitly' },
   { pattern: /TODO|FIXME|HACK|XXX/g, severity: 'low', message: 'TODO/FIXME comment found' },
 ];
 
@@ -65,7 +102,7 @@ function getAllFiles(dir, fileList = []) {
       if (!['node_modules', 'dist', 'build', '.git', 'scripts', '.next', '.nuxt', 'coverage', '.vscode', '.idea'].includes(file)) {
         getAllFiles(filePath, fileList);
       }
-    } else if (['.ts', '.tsx', '.js', '.jsx'].includes(extname(file))) {
+    } else if (SUPPORTED_EXTENSIONS.includes(extname(file))) {
       fileList.push(filePath);
     }
   });
@@ -82,11 +119,170 @@ function countLines(filePath) {
   }
 }
 
+function getFileExtension(filePath) {
+  return extname(filePath).toLowerCase();
+}
+
+function getPatternsForFile(filePath) {
+  const ext = getFileExtension(filePath);
+  
+  if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
+    return TS_JS_PATTERNS;
+  } else if (ext === '.py') {
+    return PYTHON_PATTERNS;
+  } else if (['.html', '.htm'].includes(ext)) {
+    return HTML_PATTERNS;
+  } else if (ext === '.sql') {
+    return SQL_PATTERNS;
+  }
+  
+  return [];
+}
+
+function checkPythonFile(filePath, relativePath, content, lines) {
+  // Check for missing return type hints in function definitions
+  // Only flag if function has parameter type hints but no return type hint
+  const functionDefRegex = /^def\s+(\w+)\s*\(([^)]*)\)\s*:/;
+  lines.forEach((line, index) => {
+    const match = line.match(functionDefRegex);
+    if (match) {
+      const params = match[2];
+      const hasParamTypeHints = /:\s*\w+/.test(params);
+      const hasReturnTypeHint = line.includes('->');
+      
+      // If function has parameter type hints but no return type hint, suggest adding it
+      if (hasParamTypeHints && !hasReturnTypeHint) {
+        ISSUES.medium.push({
+          file: relativePath,
+          line: index + 1,
+          message: `Function '${match[1]}' has parameter type hints but missing return type hint. Consider adding -> ReturnType`,
+          code: line.trim().substring(0, 80)
+        });
+      }
+    }
+  });
+  
+  // Check for missing imports (logging, typing)
+  const hasLogging = content.includes('import logging') || content.includes('from logging');
+  const hasPrint = content.includes('print(');
+  if (hasPrint && !hasLogging) {
+    ISSUES.medium.push({
+      file: relativePath,
+      line: 1,
+      message: 'print() statements found but logging module not imported. Use logging.getLogger() instead',
+      code: 'import logging'
+    });
+  }
+}
+
+function checkHTMLFile(filePath, relativePath, content, lines) {
+  // Check for missing DOCTYPE
+  if (!content.trim().toLowerCase().startsWith('<!doctype')) {
+    ISSUES.low.push({
+      file: relativePath,
+      line: 1,
+      message: 'HTML file missing DOCTYPE declaration',
+      code: '<!DOCTYPE html>'
+    });
+  }
+  
+  // Check for images without alt attributes (more thorough check)
+  const imgTagRegex = /<img[^>]*>/gi;
+  let match;
+  let lineNumber = 1;
+  while ((match = imgTagRegex.exec(content)) !== null) {
+    const imgTag = match[0];
+    if (!/alt\s*=/i.test(imgTag)) {
+      // Find line number
+      const beforeMatch = content.substring(0, match.index);
+      lineNumber = beforeMatch.split('\n').length;
+      
+      ISSUES.medium.push({
+        file: relativePath,
+        line: lineNumber,
+        message: 'Image missing alt attribute (accessibility issue)',
+        code: imgTag.substring(0, 80)
+      });
+    }
+  }
+  
+  // Check for form inputs without labels
+  const inputRegex = /<input[^>]*id\s*=\s*['"]([^'"]+)['"][^>]*>/gi;
+  const labelRegex = /<label[^>]*for\s*=\s*['"]([^'"]+)['"][^>]*>/gi;
+  const inputIds = new Set();
+  const labelFors = new Set();
+  
+  while ((match = inputRegex.exec(content)) !== null) {
+    const idMatch = match[0].match(/id\s*=\s*['"]([^'"]+)['"]/i);
+    if (idMatch) {
+      inputIds.add(idMatch[1]);
+    }
+  }
+  
+  while ((match = labelRegex.exec(content)) !== null) {
+    const forMatch = match[0].match(/for\s*=\s*['"]([^'"]+)['"]/i);
+    if (forMatch) {
+      labelFors.add(forMatch[1]);
+    }
+  }
+  
+  // Find inputs without corresponding labels
+  inputIds.forEach(id => {
+    if (!labelFors.has(id)) {
+      ISSUES.medium.push({
+        file: relativePath,
+        line: 1,
+        message: `Input with id="${id}" missing corresponding label (accessibility issue)`,
+        code: `<label for="${id}">...</label>`
+      });
+    }
+  });
+}
+
+function checkSQLFile(filePath, relativePath, content, lines) {
+  // Check for parameterized query patterns (positive check)
+  const hasParameterized = /[?$]\d+|:[\w]+|%s|%\([\w]+\)s/.test(content);
+  const hasStringConcat = /['"]\s*\+\s*['"]/.test(content);
+  
+  if (hasStringConcat && !hasParameterized) {
+    ISSUES.critical.push({
+      file: relativePath,
+      line: 1,
+      message: 'SQL file contains string concatenation but no parameterized queries detected. High SQL injection risk.',
+      code: 'Use parameterized queries: ? placeholders, named parameters, or prepared statements'
+    });
+  }
+  
+  // Check for DROP/TRUNCATE without safeguards
+  if (/DROP\s+(TABLE|DATABASE)/gi.test(content) && !/IF\s+EXISTS/gi.test(content)) {
+    ISSUES.high.push({
+      file: relativePath,
+      line: 1,
+      message: 'DROP statement without IF EXISTS clause. Consider adding safety checks.',
+      code: 'DROP TABLE IF EXISTS ...'
+    });
+  }
+  
+  // Check for missing transaction handling
+  const hasTransactions = /BEGIN\s+TRANSACTION|START\s+TRANSACTION|COMMIT|ROLLBACK/gi.test(content);
+  const hasMultipleStatements = (content.match(/;[\s]*$/gm) || []).length > 1;
+  
+  if (hasMultipleStatements && !hasTransactions) {
+    ISSUES.medium.push({
+      file: relativePath,
+      line: 1,
+      message: 'Multiple SQL statements found without explicit transaction handling',
+      code: 'Wrap in BEGIN TRANSACTION ... COMMIT'
+    });
+  }
+}
+
 function checkFile(filePath) {
   const relativePath = filePath.replace(projectRoot + '/', '');
   const content = readFileSync(filePath, 'utf-8');
   const lines = content.split('\n');
   const lineCount = lines.length;
+  const ext = getFileExtension(filePath);
   
   // Check file size
   if (lineCount > MAX_FILE_SIZE) {
@@ -108,9 +304,12 @@ function checkFile(filePath) {
     });
   }
   
-  // Check for forbidden patterns
+  // Get language-specific patterns
+  const patterns = getPatternsForFile(filePath);
+  
+  // Check for language-specific patterns
   lines.forEach((line, index) => {
-    FORBIDDEN_PATTERNS.forEach(({ pattern, severity, message }) => {
+    patterns.forEach(({ pattern, severity, message }) => {
       if (pattern.test(line)) {
         ISSUES[severity].push({
           file: relativePath,
@@ -121,16 +320,31 @@ function checkFile(filePath) {
       }
     });
   });
+  
+  // Language-specific additional checks
+  if (ext === '.py') {
+    checkPythonFile(filePath, relativePath, content, lines);
+  } else if (['.html', '.htm'].includes(ext)) {
+    checkHTMLFile(filePath, relativePath, content, lines);
+  } else if (ext === '.sql') {
+    checkSQLFile(filePath, relativePath, content, lines);
+  }
 }
 
 function checkForDuplicates() {
   const files = getAllFiles(projectRoot);
-  const serviceFiles = files.filter(f => f.includes('Service.') || f.includes('service.'));
+  const serviceFiles = files.filter(f => 
+    f.includes('Service.') || 
+    f.includes('service.') ||
+    f.includes('_service.') ||
+    f.includes('_Service.')
+  );
   
   // Group by base name to find potential duplicates
   const serviceMap = new Map();
   serviceFiles.forEach(file => {
-    const baseName = file.split('/').pop().replace(/\.(ts|tsx|js|jsx)$/, '').toLowerCase();
+    const ext = getFileExtension(file);
+    const baseName = file.split('/').pop().replace(/\.(ts|tsx|js|jsx|py)$/, '').toLowerCase();
     if (!serviceMap.has(baseName)) {
       serviceMap.set(baseName, []);
     }

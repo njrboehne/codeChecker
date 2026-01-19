@@ -50,16 +50,29 @@ npm run quality
 
 ## What Gets Checked
 
+### Supported Languages
+- ✅ **TypeScript/JavaScript** (`.ts`, `.tsx`, `.js`, `.jsx`)
+- ✅ **Python** (`.py`)
+- ✅ **HTML** (`.html`, `.htm`)
+- ✅ **SQL** (`.sql`)
+
 ### Security
 - ✅ XSS vulnerabilities (`dangerouslySetInnerHTML` without sanitization)
-- ✅ Type safety issues (`any` types)
-- ✅ Console.log in production code
+- ✅ Type safety issues (`any` types, Python `Any`)
+- ✅ Console.log/print() in production code
+- ✅ SQL injection risks (string concatenation in queries)
+- ✅ Python security risks (`eval()`, `exec()`, `pickle.load()`)
+- ✅ HTML XSS risks (inline scripts, event handlers, `javascript:` protocol)
+- ✅ Hardcoded credentials in SQL files
 
 ### Code Quality
 - ✅ File size limits (500 lines max)
-- ✅ Component size limits (300 lines max)
+- ✅ Component size limits (300 lines max for React components)
 - ✅ Code duplication detection
 - ✅ Missing tests
+- ✅ Python type hints (missing return types when parameters have type hints)
+- ✅ HTML accessibility (missing alt attributes, form labels)
+- ✅ SQL best practices (parameterized queries, transaction handling)
 
 ### Configuration
 - ✅ Missing linting tools
@@ -98,8 +111,9 @@ The AI agent will analyze your code semantically and provide intelligent, contex
 ### Automated Quality Checks (Enforcement Layer)
 
 The `quality-check.js` script provides automated enforcement:
-- Scans all TypeScript/JavaScript files
+- Scans TypeScript/JavaScript, Python, HTML, and SQL files
 - Detects common quality issues using pattern matching
+- Language-specific checks for security, type safety, and best practices
 - Generates detailed reports for CI/CD
 - Works alongside the AI agent for comprehensive coverage
 
